@@ -7,6 +7,7 @@ using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
+using static UnityEngine.EventSystems.EventTrigger;
 
 public class PlayerInput : MonoBehaviour
 {
@@ -15,30 +16,18 @@ public class PlayerInput : MonoBehaviour
      *****/
 
     // Player States
-    private bool grounded = false;
-    private bool jumping = false;
-    private bool clingRight = false;
-    private bool clingLeft = false;
-    private bool climb = false;
-    private float lastGrounded = 0.0f;
-    private float lastPressed = 0.0f;
-    private Vector2 moveDirection = Vector2.zero;
-    private bool combatMode = false;
+    Vector2 moveDirection = Vector2.zero;
+    Vector2 mousePosition = Vector2.zero;
 
     /*****
      * Constants (Changed in editor)
      *****/
 
-    // Timers
-    private float LASTGROUNDED = 0.167f;
-    private int LASTVECTOR = 0;
-    private float LASTPRESSED = 0.167f;
-
     // Roam Speeds
-    private float SLOWSPEED = 5; // Slow
+    // private float SLOWSPEED = 5; // Slow
     private float MOVESPEED = 8; // Nomral (Player Default)
-    private float FASTSPEED = 12; // Fast
-    private float BLITZSPEED = 20; // Blitz (Projectile)
+    // private float FASTSPEED = 12; // Fast
+    // private float BLITZSPEED = 20; // Blitz (Projectile)
 
     // Accelration and Decceleration
     private float ACCEL = 2f;
@@ -49,14 +38,20 @@ public class PlayerInput : MonoBehaviour
      *****/
 
     // Player
+    GameObject owner;
+    Transform _transform;
     public Rigidbody2D player2D;
     public PlayerInput inputActions;
+    public GameObject debug;
 
     // Starts when script is compiled or something
     void Awake()
     {
+        _transform = transform;
+        owner = _transform.gameObject;
         inputActions = new PlayerInput();
         player2D = GetComponent<Rigidbody2D>();
+        GetComponent<HealthSystem>().setAttributes(100, owner);
     }
 
     // Update
@@ -78,20 +73,23 @@ public class PlayerInput : MonoBehaviour
         player2D.AddForce(Roamy * Vector2.up);
 
         // Friction
-        float frictionx = Mathf.Min(Mathf.Abs(player2D.velocity.x), Mathf.Abs(0.2f));
+        float frictionx = Mathf.Min(Mathf.Abs(player2D.velocity.x), Mathf.Abs(0.1f));
         frictionx *= Mathf.Sign(player2D.velocity.x);
         player2D.AddForce(Vector2.right * -frictionx, ForceMode2D.Impulse);
 
-        float frictiony = Mathf.Min(Mathf.Abs(player2D.velocity.y), Mathf.Abs(0.2f));
+        float frictiony = Mathf.Min(Mathf.Abs(player2D.velocity.y), Mathf.Abs(0.1f));
         frictiony *= Mathf.Sign(player2D.velocity.y);
-        player2D.AddForce(Vector2.right * -frictiony, ForceMode2D.Impulse);
+        player2D.AddForce(Vector2.up * -frictiony, ForceMode2D.Impulse);
+
+        mousePosition = Mouse.current.position.ReadValue();
+        Debug.Log(mousePosition);
     }
 
     
 
-    /**************************************************************************************************************************************************************************************
-    * Roam Mode -=- Roam Mode -=- Roam Mode -=- Roam -=- Roam Mode -=- Roam Mode -=- Roam -=- Roam Mode -=- Roam Mode -=- Roam Mode -=- Roam Mode -=- Roam Mode -=- Roam Mode
-    **************************************************************************************************************************************************************************************/
+    /***********
+    * Roam Mode
+    ************/
 
     // Get Vector Value upon Roam keypress
     public void Move(InputAction.CallbackContext context)
@@ -99,17 +97,20 @@ public class PlayerInput : MonoBehaviour
         moveDirection = context.ReadValue<Vector2>();
     }
 
-    /**************************************************************************************************************************************************************************************
-     * Combat Mode -=- Combat Mode -=- Combat Mode -=- Combat -=- Combat Mode -=- Combat Mode -=- Combat Mode -=- Combat Mode -=- Combat Mode -=- Combat -=- Combat Mode -=- Combat Mode
-     **************************************************************************************************************************************************************************************/
+    /*************
+     * Combat Mode 
+     *************/
 
     public void Attack(InputAction.CallbackContext context)
     {
+        if (context.performed)
+        {
+            Vector2 direction = new Vector2(-1 * (Screen.width/2 - mousePosition.x - player2D.position.x), -1 * (Screen.height/2 - mousePosition.y - player2D.position.y));
+            direction.Normalize();
+            Debug.Log(direction);
 
-    }
-
-    public void Interact(InputAction.CallbackContext context)
-    {
-
+            GameObject newEnemy = Instantiate(debug, player2D.position, Quaternion.identity);
+            newEnemy.GetComponent<Rigidbody2D>().velocity = direction * 10;
+        }
     }
 }
